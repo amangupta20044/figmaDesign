@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DOM Figma Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <button id="addRect">Add Rectangle</button>
+    <button id="addText">Add Text</button>
+    <button id="exportJSON">Export JSON</button>
+    <button id="exportHTML">Export HTML</button>
+  </header>
+
+  <!-- Main Editor -->
+  <main class="editor">
+
+    <!-- Layers Panel -->
+    <aside class="panel">
+      <h3>Layers</h3>
+      <ul id="layersList"></ul>
+      <button id="layerUp">Move Up</button>
+      <button id="layerDown">Move Down</button>
+    </aside>
+
+    <!-- Canvas -->
+    <div id="canvas"></div>
+
+    <!-- Properties Panel -->
+    <aside class="panel">
+      <h3>Properties</h3>
+
+      <label>
+        Width
+        <input type="number" id="propWidth">
+      </label>
+
+      <label>
+        Height
+        <input type="number" id="propHeight">
+      </label>
+
+      <label>
+        Background
+        <input type="color" id="propBg">
+      </label>
+
+      <label id="textProp">
+        Text
+        <input type="text" id="propText">
+      </label>
+    </aside>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

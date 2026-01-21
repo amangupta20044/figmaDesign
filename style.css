@@ -1,0 +1,105 @@
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0f172a;
+  color: white;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: #020617;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Layout */
+.editor {
+  display: grid;
+  grid-template-columns: 200px 1fr 220px;
+  height: calc(100vh - 50px);
+}
+
+/* Panels */
+.panel {
+  background: #020617;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.panel label {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.panel input {
+  padding: 6px;
+}
+
+/* Canvas */
+#canvas {
+  background: #111827;
+  margin: 10px;
+  border-radius: 10px;
+  position: relative;
+}
+
+/* Elements */
+.element {
+  position: absolute;
+  cursor: move;
+}
+
+/* Selected */
+.selected {
+  outline: 2px solid #38bdf8;
+}
+
+/* Resize handles */
+.handle {
+  width: 10px;
+  height: 10px;
+  background: white;
+  position: absolute;
+}
+
+.handle.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+.handle.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+.handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+/* Layers */
+#layersList {
+  list-style: none;
+  padding: 0;
+}
+
+#layersList li {
+  padding: 6px;
+  cursor: pointer;
+}
+
+#layersList li.active {
+  background: #2563eb;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+}
