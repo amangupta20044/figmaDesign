@@ -1,6 +1,11 @@
+/* =================================================
+   REFERENCES
+================================================= */
 const canvas = document.getElementById("canvas");
+
 const addRect = document.getElementById("addRect");
 const addText = document.getElementById("addText");
+
 const exportJSONBtn = document.getElementById("exportJSON");
 const exportHTMLBtn = document.getElementById("exportHTML");
 
@@ -14,54 +19,69 @@ const propBg = document.getElementById("propBg");
 const propText = document.getElementById("propText");
 const textProp = document.getElementById("textProp");
 
-let elements = [];
+/* =================================================
+   STATE
+================================================= */
+let elements = [];          // internal layer order (BOTTOM → TOP)
 let selectedElement = null;
 
-/* Utility */
+/* =================================================
+   UTILS
+================================================= */
 function uid() {
-  return "el_" + Date.now();
+  return "el_" + Math.random().toString(36).slice(2);
 }
 
-/* ---------------- Element Creation ---------------- */
+/* =================================================
+   CREATE ELEMENT (USER ACTION ONLY)
+================================================= */
 addRect.onclick = () => createElement("rect");
 addText.onclick = () => createElement("text");
 
-function createElement(type) {
-  const div = document.createElement("div");
-  div.className = "element";
-  div.dataset.id = uid();
-  div.dataset.type = type;
+function createElement(type, data = null) {
+  const el = document.createElement("div");
+  el.className = "element";
 
-  div.style.left = "50px";
-  div.style.top = "50px";
-  div.style.width = "120px";
-  div.style.height = "80px";
-  div.style.background = type === "rect" ? "#22c55e" : "transparent";
-  div.style.color = "white";
+  el.dataset.id = data?.id || uid();
+  el.dataset.type = type;
 
-  if (type === "text") div.textContent = "Text";
+  el.style.left = (data?.x ?? 50) + "px";
+  el.style.top = (data?.y ?? 50) + "px";
+  el.style.width = (data?.width ?? 120) + "px";
+  el.style.height = (data?.height ?? 80) + "px";
+  el.style.background =
+    data?.bg ?? (type === "rect" ? "#22c55e" : "transparent");
+  el.style.color = "white";
 
-  div.onclick = (e) => {
+  if (type === "text") {
+    el.textContent = data?.text || "Text";
+  }
+
+  el.onclick = (e) => {
     e.stopPropagation();
-    selectElement(div);
+    selectElement(el);
   };
 
-  makeDraggable(div);
-  canvas.appendChild(div);
+  makeDraggable(el);
+  canvas.appendChild(el);
 
-  elements.push({ id: div.dataset.id, type });
+  elements.push({ id: el.dataset.id, type });
+
+  applyZIndexes();
   updateLayers();
-  save();
+  saveLayout();
 }
 
-/* ---------------- Selection ---------------- */
+/* =================================================
+   SELECTION
+================================================= */
 canvas.onclick = () => deselect();
 
 function selectElement(el) {
   deselect();
   selectedElement = el;
   el.classList.add("selected");
-  addHandles(el);
+  addResizeHandles(el);
   updateProperties();
   updateLayers();
 }
@@ -75,7 +95,9 @@ function deselect() {
   updateLayers();
 }
 
-/* ---------------- Dragging ---------------- */
+/* =================================================
+   DRAGGING
+================================================= */
 function makeDraggable(el) {
   el.onmousedown = (e) => {
     if (el !== selectedElement) return;
@@ -99,7 +121,7 @@ function makeDraggable(el) {
     function stop() {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", stop);
-      save();
+      saveLayout();
     }
 
     document.addEventListener("mousemove", move);
@@ -107,8 +129,10 @@ function makeDraggable(el) {
   };
 }
 
-/* ---------------- Resize ---------------- */
-function addHandles(el) {
+/* =================================================
+   RESIZE
+================================================= */
+function addResizeHandles(el) {
   ["tl","tr","bl","br"].forEach(pos => {
     const h = document.createElement("div");
     h.className = "handle " + pos;
@@ -116,6 +140,7 @@ function addHandles(el) {
 
     h.onmousedown = (e) => {
       e.stopPropagation();
+
       const startW = el.offsetWidth;
       const startH = el.offsetHeight;
       const startX = e.clientX;
@@ -129,13 +154,22 @@ function addHandles(el) {
       document.addEventListener("mousemove", resize);
       document.addEventListener("mouseup", () => {
         document.removeEventListener("mousemove", resize);
-        save();
+        saveLayout();
       }, { once: true });
     };
   });
 }
 
-/* ---------------- Layers ---------------- */
+/* =================================================
+   LAYERS (PDF-CORRECT)
+================================================= */
+function applyZIndexes() {
+  elements.forEach((el, index) => {
+    const dom = document.querySelector(`[data-id="${el.id}"]`);
+    dom.style.zIndex = index;
+  });
+}
+
 function updateLayers() {
   layersList.innerHTML = "";
   elements.forEach(el => {
@@ -150,17 +184,37 @@ function updateLayers() {
 
 layerUp.onclick = () => {
   if (!selectedElement) return;
-  selectedElement.style.zIndex = +selectedElement.style.zIndex + 1 || 1;
-  save();
+
+  const id = selectedElement.dataset.id;
+  const index = elements.findIndex(e => e.id === id);
+  if (index === elements.length - 1) return;
+
+  [elements[index], elements[index + 1]] =
+  [elements[index + 1], elements[index]];
+
+  applyZIndexes();
+  updateLayers();
+  saveLayout();
 };
 
 layerDown.onclick = () => {
   if (!selectedElement) return;
-  selectedElement.style.zIndex = +selectedElement.style.zIndex - 1 || 0;
-  save();
+
+  const id = selectedElement.dataset.id;
+  const index = elements.findIndex(e => e.id === id);
+  if (index === 0) return;
+
+  [elements[index], elements[index - 1]] =
+  [elements[index - 1], elements[index]];
+
+  applyZIndexes();
+  updateLayers();
+  saveLayout();
 };
 
-/* ---------------- Properties ---------------- */
+/* =================================================
+   PROPERTIES PANEL
+================================================= */
 function updateProperties() {
   if (!selectedElement) {
     propWidth.value = "";
@@ -191,24 +245,29 @@ function updateProperties() {
     selectedElement.style.background = propBg.value;
     if (selectedElement.dataset.type === "text")
       selectedElement.textContent = propText.value;
-    save();
+    saveLayout();
   };
 });
 
-/* ---------------- Keyboard ---------------- */
+/* =================================================
+   KEYBOARD
+================================================= */
 document.onkeydown = (e) => {
   if (!selectedElement) return;
+
   let x = selectedElement.offsetLeft;
   let y = selectedElement.offsetTop;
   const step = 5;
 
   if (e.key === "Delete") {
+    const id = selectedElement.dataset.id;
     selectedElement.remove();
-    elements = elements.filter(e => e.id !== selectedElement.dataset.id);
+    elements = elements.filter(e => e.id !== id);
     selectedElement = null;
+    saveLayout();
     updateLayers();
     updateProperties();
-    save();
+    return;
   }
 
   if (e.key === "ArrowLeft") x -= step;
@@ -218,10 +277,13 @@ document.onkeydown = (e) => {
 
   selectedElement.style.left = x + "px";
   selectedElement.style.top = y + "px";
+  saveLayout();
 };
 
-/* ---------------- Save & Load ---------------- */
-function save() {
+/* =================================================
+   SAVE & LOAD (STABLE)
+================================================= */
+function saveLayout() {
   const data = elements.map(el => {
     const d = document.querySelector(`[data-id="${el.id}"]`);
     return {
@@ -229,33 +291,27 @@ function save() {
       type: el.type,
       x: d.offsetLeft,
       y: d.offsetTop,
-      w: d.offsetWidth,
-      h: d.offsetHeight,
+      width: d.offsetWidth,
+      height: d.offsetHeight,
       bg: d.style.background,
       text: d.textContent,
-      z: d.style.zIndex
+      zIndex: d.style.zIndex
     };
   });
-  localStorage.setItem("layout", JSON.stringify(data));
+  localStorage.setItem("figma_layout", JSON.stringify(data));
 }
 
-function load() {
-  const data = JSON.parse(localStorage.getItem("layout") || "[]");
-  data.forEach(d => {
-    createElement(d.type);
-    const el = canvas.lastChild;
-    el.style.left = d.x + "px";
-    el.style.top = d.y + "px";
-    el.style.width = d.w + "px";
-    el.style.height = d.h + "px";
-    el.style.background = d.bg;
-    el.style.zIndex = d.z;
-    if (d.type === "text") el.textContent = d.text;
-  });
+function loadLayout() {
+  const data = JSON.parse(localStorage.getItem("figma_layout"));
+  if (!data) return;
+  data.forEach(item => createElement(item.type, item));
 }
-load();
 
-/* ---------------- Export ---------------- */
+loadLayout();
+
+/* =================================================
+   EXPORT
+================================================= */
 function download(name, content) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([content]));
@@ -264,7 +320,7 @@ function download(name, content) {
 }
 
 exportJSONBtn.onclick = () => {
-  download("design.json", localStorage.getItem("layout"));
+  download("design.json", localStorage.getItem("figma_layout"));
 };
 
 exportHTMLBtn.onclick = () => {
@@ -279,3 +335,5 @@ exportHTMLBtn.onclick = () => {
   html += "</body>";
   download("design.html", html);
 };
+
+
